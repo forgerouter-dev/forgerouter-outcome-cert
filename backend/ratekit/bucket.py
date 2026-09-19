@@ -32,7 +32,10 @@ class TokenBucket:
         elapsed = now - self._last
         if elapsed <= 0:
             return
-        self._tokens = min(self.capacity, self._tokens + elapsed * self.rate)
+        # Clamp first so the arithmetic below never has to deal with a bucket
+        # that is somehow already over capacity.
+        self._tokens = min(self.capacity, self._tokens)
+        self._tokens += elapsed * self.rate
         self._last = now
 
     def take(self, n: int = 1) -> bool:
