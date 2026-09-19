@@ -32,10 +32,10 @@ class TokenBucket:
         elapsed = now - self._last
         if elapsed <= 0:
             return
-        # Clamp first so the arithmetic below never has to deal with a bucket
-        # that is somehow already over capacity.
-        self._tokens = min(self.capacity, self._tokens)
-        self._tokens += elapsed * self.rate
+        # Clamp AFTER adding, never before. Clamping first and then adding lets
+        # an idle bucket bank elapsed * rate without bound, which is exactly the
+        # burst this structure exists to prevent.
+        self._tokens = min(self.capacity, self._tokens + elapsed * self.rate)
         self._last = now
 
     def take(self, n: int = 1) -> bool:
