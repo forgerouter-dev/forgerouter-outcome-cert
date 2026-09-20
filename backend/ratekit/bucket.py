@@ -50,3 +50,16 @@ class TokenBucket:
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
+
+    def retry_after(self, n: int = 1) -> float:
+        """Seconds until `n` tokens are available. 0.0 if they already are.
+
+        Lets a caller send Retry-After instead of making the client poll. The
+        answer is exact rather than a guess: tokens accrue linearly at `rate`,
+        so the wait is just the shortfall divided by the rate.
+        """
+        now = time.monotonic()
+        self._refill(now)
+        if self._tokens >= n:
+            return 0.0
+        return (n - self._tokens) / self.rate

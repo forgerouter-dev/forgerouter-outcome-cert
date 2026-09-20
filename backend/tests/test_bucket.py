@@ -60,3 +60,17 @@ def test_rejects_nonsense_construction(clock):
         TokenBucket(capacity=0, rate=1.0)
     with pytest.raises(ValueError):
         TokenBucket(capacity=1, rate=0)
+
+
+def test_retry_after_is_zero_when_tokens_are_available():
+    b = TokenBucket(capacity=5, rate=1.0)
+    assert b.retry_after() == 0.0
+
+
+def test_retry_after_reports_the_shortfall():
+    b = TokenBucket(capacity=5, rate=2.0)
+    for _ in range(5):
+        assert b.take()
+    # Empty bucket, refilling at 2/s, so one token is half a second away.
+    assert 0.4 < b.retry_after() < 0.6
+

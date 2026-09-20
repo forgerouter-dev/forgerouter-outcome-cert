@@ -35,6 +35,10 @@ class LimiterRegistry:
     def take(self, key: str, n: int = 1) -> bool:
         return self.bucket(key).take(n)
 
+    def retry_after(self, key: str, n: int = 1) -> float:
+        """Seconds until this key can spend `n` tokens."""
+        return self.bucket(key).retry_after(n)
+
     def sweep(self) -> int:
         """Drop keys untouched for `idle_ttl`. Returns how many were dropped."""
         now = time.monotonic()
