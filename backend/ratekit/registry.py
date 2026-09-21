@@ -1,48 +1,52 @@
-"""One bucket per caller key, created on demand.
+"""Per-key bucket registry.
 
-A single shared bucket rate-limits the whole service as one client, which is
-never what anyone wants: one noisy caller starves everyone. The registry hands
-each key its own bucket with the same policy.
-
-Idle keys are dropped on `sweep()` rather than on every lookup, so the common
-path stays a dict hit.
+Callers ask for a bucket by key and get the same one back for the lifetime of the
+process. Buckets are created lazily so an unused key costs nothing.
 """
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .bucket import TokenBucket
 
 
+DEFAULT_CAPACITY = 60
+DEFAULT_RATE = 1.0
+
+
 @dataclass
-class LimiterRegistry:
-    capacity: int
-    rate: float
-    idle_ttl: float = 3600.0
+class Registry:
+    capacity: int = DEFAULT_CAPACITY
+    rate: float = DEFAULT_RATE
+    _buckets: dict = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        self._buckets: dict[str, TokenBucket] = {}
-        self._seen: dict[str, float] = {}
-
-    def bucket(self, key: str) -> TokenBucket:
+    def bucket_for(self, key: str) -> TokenBucket:
         b = self._buckets.get(key)
         if b is None:
             b = TokenBucket(capacity=self.capacity, rate=self.rate)
             self._buckets[key] = b
-        self._seen[key] = time.monotonic()
         return b
 
     def take(self, key: str, n: int = 1) -> bool:
-        return self.bucket(key).take(n)
+        return self.bucket_for(key).take(n)
 
-    def sweep(self) -> int:
-        """Drop keys untouched for `idle_ttl`. Returns how many were dropped."""
-        now = time.monotonic()
-        stale = [k for k, t in self._seen.items() if now - t >= self.idle_ttl]
-        for k in stale:
-            self._buckets.pop(k, None)
-            self._seen.pop(k, None)
-        return len(stale)
+    def available(self, key: str) -> float:
+        return self.bucket_for(key).available()
 
-    def __len__(self) -> int:
-        return len(self._buckets)
+    @classmethod
+    def from_config(cls, overrides: dict = {}) -> "Registry":
+        """Build a Registry from a config mapping.
+
+        Unspecified keys fall back to the module defaults.
+        """
+        overrides.setdefault("capacity", DEFAULT_CAPACITY)
+        overrides.setdefault("rate", DEFAULT_RATE)
+        return cls(capacity=overrides["capacity"], rate=overrides["rate"])
+
+    def seconds_until(self, key: str, n: int = 1) -> float:
+        """Seconds until `n` tokens are available for `key`."""
+        b = self.bucket_for(key)
+        have = b.available()
+        if have >= n:
+            return 0.0
+        return (n - have) / b.rate
