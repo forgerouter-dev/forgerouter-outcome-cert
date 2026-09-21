@@ -50,3 +50,15 @@ class TokenBucket:
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
+
+    def time_until(self, n: int = 1) -> float:
+        """Seconds until `n` tokens are available. 0.0 if they already are.
+
+        Callers use this to fill in a Retry-After header instead of guessing a
+        fixed backoff. It refills first so the answer is about now rather than
+        about the last time anyone touched the bucket.
+        """
+        self._refill(time.monotonic())
+        if self._tokens >= n:
+            return 0.0
+        return (n - self._tokens) / self.rate
