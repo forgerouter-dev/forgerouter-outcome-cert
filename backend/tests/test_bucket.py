@@ -60,3 +60,14 @@ def test_rejects_nonsense_construction(clock):
         TokenBucket(capacity=0, rate=1.0)
     with pytest.raises(ValueError):
         TokenBucket(capacity=1, rate=0)
+
+
+def test_time_until_zero_when_tokens_available():
+    b = TokenBucket(capacity=5, rate=1.0)
+    assert b.time_until(1) == 0.0
+
+
+def test_time_until_estimates_the_wait():
+    b = TokenBucket(capacity=2, rate=2.0)
+    assert b.take(2) is True
+    assert 0.0 < b.time_until(1) <= 0.5
