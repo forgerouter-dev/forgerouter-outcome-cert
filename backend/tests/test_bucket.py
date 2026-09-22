@@ -60,3 +60,11 @@ def test_rejects_nonsense_construction(clock):
         TokenBucket(capacity=0, rate=1.0)
     with pytest.raises(ValueError):
         TokenBucket(capacity=1, rate=0)
+
+
+def test_refund_returns_a_spent_token():
+    b = TokenBucket(capacity=3, rate=1.0)
+    assert b.take() is True
+    assert b.available() < 3
+    b.refund()
+    assert b.available() >= 2.9

@@ -50,3 +50,15 @@ class TokenBucket:
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
+
+    def refund(self, n: int = 1) -> None:
+        """Return `n` tokens after a request the caller ended up not making.
+
+        A gateway often spends a token, forwards the request, and learns from the
+        upstream that it never ran — a connection refused, a circuit breaker
+        open, a 503 before any work happened. Charging for that is wrong: the
+        client used no capacity, and over a long outage the spend is entirely
+        phantom.
+        """
+        self._refill(time.monotonic())
+        self._tokens += n
