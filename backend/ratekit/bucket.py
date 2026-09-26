@@ -50,3 +50,7 @@ class TokenBucket:
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
+
+    def __repr__(self) -> str:
+        return (f"TokenBucket(capacity={self.capacity}, rate={self.rate}, "
+                f"tokens={self.available():.2f})")
