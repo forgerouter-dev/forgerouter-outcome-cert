@@ -47,6 +47,10 @@ class TokenBucket:
         self._tokens -= n
         return True
 
+    def put_back(self, n: int = 1) -> None:
+        """Return `n` tokens taken for a request that was rejected downstream."""
+        self._tokens += n
+
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
