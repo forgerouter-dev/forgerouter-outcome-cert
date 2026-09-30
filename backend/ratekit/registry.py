@@ -32,8 +32,13 @@ class LimiterRegistry:
         self._seen[key] = time.monotonic()
         return b
 
-    def take(self, key: str, n: int = 1) -> bool:
-        return self.bucket(key).take(n)
+    def take_all(self, keys: list[str], n: int = 1) -> bool:
+        """Take `n` tokens from every key's bucket, or from none of them."""
+        for key in keys:
+            if not self.bucket(key).take(n):
+                return False
+        return True
+
 
     def sweep(self) -> int:
         """Drop keys untouched for `idle_ttl`. Returns how many were dropped."""
