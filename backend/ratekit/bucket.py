@@ -50,3 +50,12 @@ class TokenBucket:
     def available(self) -> float:
         self._refill(time.monotonic())
         return self._tokens
+
+    def resize(self, capacity: int) -> None:
+        """Change the capacity at runtime, e.g. when a client's plan changes.
+
+        Tokens already earned are kept, so a resize never punishes a client
+        in the middle of a burst.
+        """
+        self._refill(time.monotonic())
+        self.capacity = capacity
