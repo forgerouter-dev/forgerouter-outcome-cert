@@ -40,3 +40,10 @@ def test_sweep_drops_only_idle_keys(clock):
     assert r.sweep() == 1
     assert len(r) == 1
     assert r.bucket("new") is not None
+
+
+def test_take_all_spends_from_every_key():
+    reg = LimiterRegistry(capacity=2, rate=0.0)
+    assert reg.take_all(["user:1", "org:7"])
+    assert reg.take_all(["user:1", "org:7"])
+    assert not reg.take_all(["user:1", "org:7"])
