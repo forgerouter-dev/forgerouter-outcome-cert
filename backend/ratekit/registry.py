@@ -35,6 +35,17 @@ class LimiterRegistry:
     def take(self, key: str, n: int = 1) -> bool:
         return self.bucket(key).take(n)
 
+    def take_all(self, keys: list[str], n: int = 1) -> bool:
+        """Spend `n` tokens from every key, or from none of them.
+
+        Used when one request counts against several limits at once, such as
+        the caller's own key and its organisation's.
+        """
+        for key in keys:
+            if not self.bucket(key).take(n):
+                return False
+        return True
+
     def sweep(self) -> int:
         """Drop keys untouched for `idle_ttl`. Returns how many were dropped."""
         now = time.monotonic()
